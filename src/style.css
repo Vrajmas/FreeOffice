@@ -48,3 +48,8 @@
 .table-resize-handle::before{content:'';position:absolute;width:7px;height:7px;border:1px solid #8caed0;border-radius:2px;background:#fff;box-shadow:0 1px 2px #27303b22}
 .table-resize-handle.column::before{top:-4px;left:1px}.table-resize-handle.row::before{left:-4px;top:1px}
 .table-resize-handle:hover::before,.table-resize-handle:focus-visible::before{background:#2477bd;border-color:#2477bd}
+.pages-editor .paper img{max-width:100%;height:auto;vertical-align:middle;cursor:grab;user-select:none}
+.pages-editor .paper img:active{cursor:grabbing}
+.image-resize-handle{position:absolute;z-index:6;width:20px;height:20px;border:2px solid white;border-radius:5px;background:#2477bd;box-shadow:0 0 0 1px #2477bd,0 2px 5px #27303b44;cursor:nwse-resize;touch-action:none}
+.image-resize-handle:focus-visible{outline:2px solid #173d73;outline-offset:3px}
+@media print{.image-resize-handle{display:none!important}}

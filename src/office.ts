@@ -2,7 +2,7 @@ import XLSX from 'xlsx-js-style';
 import mammoth from 'mammoth';
 import DOMPurify from 'dompurify';
 import JSZip from 'jszip';
-import {AlignmentType,Document,ExternalHyperlink,HeadingLevel,HeightRule,Packer,Paragraph,Table,TableCell,TableLayoutType,TableRow,TextRun,WidthType} from 'docx';
+import {AlignmentType,Document,ExternalHyperlink,HeadingLevel,HeightRule,ImageRun,Packer,Paragraph,Table,TableCell,TableLayoutType,TableRow,TextRun,WidthType} from 'docx';
 
 export type Grid=Record<string,string>;
 export type CellFormat={bold?:boolean;italic?:boolean;underline?:boolean;align?:'left'|'center'|'right';fill?:string;color?:string;numberFormat?:'general'|'number'|'percent'};
@@ -40,20 +40,33 @@ export async function importDoc(bytes:Uint8Array){
 export async function exportDoc(html:string){
   const dom=new DOMParser().parseFromString(html,'text/html');
   const children:(Paragraph|Table)[]=[];
-  type Run=TextRun|ExternalHyperlink;
-  function runs(node:Node,style:{bold?:boolean;italics?:boolean;underline?:{}}={}):Run[]{
+  type Run=TextRun|ExternalHyperlink|ImageRun;
+  type RunStyle={bold?:boolean;italics?:boolean;underline?:{};strike?:boolean;font?:string;size?:number;color?:string;shading?:{fill:string}};
+  function color(value:string){const hex=/^#([\da-f]{6})$/i.exec(value.trim());if(hex)return hex[1].toUpperCase();const rgb=/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i.exec(value.trim());return rgb?rgb.slice(1).map(part=>Number(part).toString(16).padStart(2,'0')).join('').toUpperCase():undefined}
+  function runs(node:Node,style:RunStyle={}):Run[]{
     if(node.nodeType===Node.TEXT_NODE)return node.textContent?[new TextRun({text:node.textContent,...style})]:[];
     if(!(node instanceof Element))return [];
     const tag=node.tagName.toLowerCase();
     if(tag==='br')return [new TextRun({break:1})];
-    const next={...style,...(['b','strong'].includes(tag)?{bold:true}:{}),...(['i','em'].includes(tag)?{italics:true}:{}),...(tag==='u'?{underline:{}}:{})};
+    if(tag==='img'){
+      const image=node as HTMLImageElement,match=/^data:image\/(png|jpeg|gif);base64,([\s\S]+)$/i.exec(image.src);
+      if(!match)return [];
+      const raw=atob(match[2]),data=Uint8Array.from(raw,char=>char.charCodeAt(0));
+      const width=Math.max(24,Math.min(626,Number.parseFloat(image.style.width)||image.width||300));
+      const height=Math.max(24,Math.min(950,Number.parseFloat(image.style.height)||image.height||width));
+      return [new ImageRun({data,type:match[1].toLowerCase()==='jpeg'?'jpg':match[1].toLowerCase() as 'png'|'gif',transformation:{width,height}})];
+    }
+    const element=node as HTMLElement,inline=element.style,legacy=node as HTMLFontElement;
+    const fontSize=legacy.size&&tag==='font'?Number(legacy.size):0;
+    const next:RunStyle={...style,...(['b','strong'].includes(tag)?{bold:true}:{}),...(['i','em'].includes(tag)?{italics:true}:{}),...(tag==='u'?{underline:{}}:{}),...(['s','strike','del'].includes(tag)||inline.textDecoration.includes('line-through')?{strike:true}:{}),...(inline.fontFamily||legacy.face&&tag==='font'?{font:inline.fontFamily||legacy.face}:{}),...(fontSize?{size:[0,16,20,24,28,36,48,72][Math.min(7,fontSize)]}:{}),...(color(inline.color||(tag==='font'?legacy.color:''))?{color:color(inline.color||(tag==='font'?legacy.color:''))!}:{}),...(color(inline.backgroundColor)?{shading:{fill:color(inline.backgroundColor)!}}:{})};
     const inner=Array.from(node.childNodes).flatMap(child=>runs(child,next));
     if(tag==='a'&&node.getAttribute('href')?.match(/^https?:\/\//i))return [new ExternalHyperlink({link:node.getAttribute('href')!,children:[new TextRun({text:node.textContent||node.getAttribute('href')!,style:'Hyperlink'})]})];
     return inner;
   }
   function paragraph(el:Element,kind?:'bullet'|'number'):Paragraph{
     const tag=el.tagName.toLowerCase();const content=Array.from(el.childNodes).flatMap(node=>runs(node));
-    return new Paragraph({children:content.length?content:[new TextRun('')],heading:tag==='h1'?HeadingLevel.HEADING_1:tag==='h2'?HeadingLevel.HEADING_2:undefined,bullet:kind==='bullet'?{level:0}:undefined,numbering:kind==='number'?{reference:'numbered',level:0}:undefined,alignment:el.getAttribute('style')?.includes('text-align: center')?AlignmentType.CENTER:el.getAttribute('style')?.includes('text-align: right')?AlignmentType.RIGHT:undefined,spacing:{after:140}});
+    const align=(el as HTMLElement).style.textAlign;
+    return new Paragraph({children:content.length?content:[new TextRun('')],heading:tag==='h1'?HeadingLevel.HEADING_1:tag==='h2'?HeadingLevel.HEADING_2:undefined,bullet:kind==='bullet'?{level:0}:undefined,numbering:kind==='number'?{reference:'numbered',level:0}:undefined,alignment:align==='center'?AlignmentType.CENTER:align==='right'?AlignmentType.RIGHT:align==='justify'?AlignmentType.JUSTIFIED:undefined,spacing:{after:140}});
   }
   function visit(el:Element){const tag=el.tagName.toLowerCase();if(tag==='ul'||tag==='ol'){for(const li of Array.from(el.children))children.push(paragraph(li,tag==='ul'?'bullet':'number'));return}if(tag==='table'){const rows=Array.from(el.querySelectorAll('tr')).map(tr=>{const height=parseFloat((tr as HTMLElement).style.height);return new TableRow({height:Number.isFinite(height)?{value:Math.round(height*15),rule:HeightRule.ATLEAST}:undefined,children:Array.from(tr.children).map(cell=>{const width=parseFloat((cell as HTMLElement).style.width);return new TableCell({width:Number.isFinite(width)?{size:width,type:WidthType.PERCENTAGE}:undefined,children:[paragraph(cell)]})})})});const specifiedWidth=parseFloat((el as HTMLElement).style.width);const width=Number.isFinite(specifiedWidth)?Math.min(100,Math.max(40,specifiedWidth)):100;if(rows.length)children.push(new Table({rows,width:{size:width,type:WidthType.PERCENTAGE},layout:(el as HTMLElement).style.tableLayout==='fixed'?TableLayoutType.FIXED:undefined}));return}if(tag==='div'&&el.children.length){Array.from(el.children).forEach(visit);return}children.push(paragraph(el))}
   Array.from(dom.body.children).forEach(visit);
