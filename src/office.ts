@@ -2,7 +2,7 @@ import XLSX from 'xlsx-js-style';
 import mammoth from 'mammoth';
 import DOMPurify from 'dompurify';
 import JSZip from 'jszip';
-import {AlignmentType,Document,ExternalHyperlink,HeadingLevel,Packer,Paragraph,Table,TableCell,TableRow,TextRun,WidthType} from 'docx';
+import {AlignmentType,Document,ExternalHyperlink,HeadingLevel,HeightRule,Packer,Paragraph,Table,TableCell,TableLayoutType,TableRow,TextRun,WidthType} from 'docx';
 
 export type Grid=Record<string,string>;
 export type CellFormat={bold?:boolean;italic?:boolean;underline?:boolean;align?:'left'|'center'|'right';fill?:string;color?:string;numberFormat?:'general'|'number'|'percent'};
@@ -17,15 +17,23 @@ export async function importDoc(bytes:Uint8Array){
   const archive=await JSZip.loadAsync(bytes),source=archive.file('word/document.xml');
   if(!source)return html;
   const xml=new DOMParser().parseFromString(await source.async('string'),'application/xml');
-  const widths=Array.from(xml.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main','tbl')).map(table=>{
-    const value=table.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main','tblW')[0];
-    if(value?.getAttribute('w:type')!=='pct')return null;
-    const width=Number(value.getAttribute('w:w'))/50;
-    return Number.isFinite(width)&&width>=40&&width<=100?width:null;
+  const namespace='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const child=(element:Element|undefined,name:string)=>Array.from(element?.children||[]).find(item=>item.namespaceURI===namespace&&item.localName===name);
+  const sizes=Array.from(xml.getElementsByTagNameNS(namespace,'tbl')).map(table=>{
+    const widthNode=child(child(table,'tblPr'),'tblW'),rawWidth=Number(widthNode?.getAttribute('w:w'))/50;
+    const width=widthNode?.getAttribute('w:type')==='pct'&&Number.isFinite(rawWidth)&&rawWidth>=40&&rawWidth<=100?rawWidth:null;
+    const rows=Array.from(table.children).flatMap(section=>section.localName==='tr'?[section]:Array.from(section.children).filter(row=>row.localName==='tr'));
+    const firstRow=rows[0],cells=Array.from(firstRow?.children||[]).filter(cell=>cell.localName==='tc');
+    let columns=cells.map(cell=>{const value=child(child(cell,'tcPr'),'tcW');return value?.getAttribute('w:type')==='pct'?Number(value.getAttribute('w:w'))/50:null});
+    if(!columns.length||columns.some(value=>value===null||!Number.isFinite(value))){const grid=child(table,'tblGrid');columns=Array.from(grid?.children||[]).filter(cell=>cell.localName==='gridCol').map(cell=>Number(cell.getAttribute('w:w')))}
+    const total=columns.reduce<number>((sum,value)=>sum+(value||0),0);
+    const normalized=columns.length>1&&total>0&&columns.every(value=>value!==null&&Number.isFinite(value))?columns.map(value=>(value||0)/total*100):null;
+    const heights=rows.map(row=>{const height=child(child(row,'trPr'),'trHeight'),twips=Number(height?.getAttribute('w:val'));return height&&Number.isFinite(twips)&&twips>=360&&twips<=12000?twips/15:null});
+    return {width,columns:normalized,heights};
   });
-  if(!widths.some(width=>width!==null))return html;
+  if(!sizes.length)return html;
   const dom=new DOMParser().parseFromString(html,'text/html');
-  dom.querySelectorAll('table').forEach((table,index)=>{if(widths[index]!==null&&widths[index]!==undefined)table.style.width=`${widths[index]}%`});
+  dom.querySelectorAll('table').forEach((table,index)=>{const size=sizes[index];if(!size)return;if(size.width!==null)table.style.width=`${size.width}%`;if(size.columns){table.style.tableLayout='fixed';for(const row of Array.from(table.rows))for(const [column,cell] of Array.from(row.cells).entries())if(size.columns[column])cell.style.width=`${size.columns[column]}%`}for(const [row,height] of size.heights.entries())if(height&&table.rows[row])table.rows[row].style.height=`${height}px`});
   return dom.body.innerHTML;
 }
 
@@ -47,7 +55,7 @@ export async function exportDoc(html:string){
     const tag=el.tagName.toLowerCase();const content=Array.from(el.childNodes).flatMap(node=>runs(node));
     return new Paragraph({children:content.length?content:[new TextRun('')],heading:tag==='h1'?HeadingLevel.HEADING_1:tag==='h2'?HeadingLevel.HEADING_2:undefined,bullet:kind==='bullet'?{level:0}:undefined,numbering:kind==='number'?{reference:'numbered',level:0}:undefined,alignment:el.getAttribute('style')?.includes('text-align: center')?AlignmentType.CENTER:el.getAttribute('style')?.includes('text-align: right')?AlignmentType.RIGHT:undefined,spacing:{after:140}});
   }
-  function visit(el:Element){const tag=el.tagName.toLowerCase();if(tag==='ul'||tag==='ol'){for(const li of Array.from(el.children))children.push(paragraph(li,tag==='ul'?'bullet':'number'));return}if(tag==='table'){const rows=Array.from(el.querySelectorAll('tr')).map(tr=>new TableRow({children:Array.from(tr.children).map(cell=>new TableCell({children:[paragraph(cell)]}))}));const specifiedWidth=parseFloat((el as HTMLElement).style.width);const width=Number.isFinite(specifiedWidth)?Math.min(100,Math.max(40,specifiedWidth)):100;if(rows.length)children.push(new Table({rows,width:{size:width,type:WidthType.PERCENTAGE}}));return}if(tag==='div'&&el.children.length){Array.from(el.children).forEach(visit);return}children.push(paragraph(el))}
+  function visit(el:Element){const tag=el.tagName.toLowerCase();if(tag==='ul'||tag==='ol'){for(const li of Array.from(el.children))children.push(paragraph(li,tag==='ul'?'bullet':'number'));return}if(tag==='table'){const rows=Array.from(el.querySelectorAll('tr')).map(tr=>{const height=parseFloat((tr as HTMLElement).style.height);return new TableRow({height:Number.isFinite(height)?{value:Math.round(height*15),rule:HeightRule.ATLEAST}:undefined,children:Array.from(tr.children).map(cell=>{const width=parseFloat((cell as HTMLElement).style.width);return new TableCell({width:Number.isFinite(width)?{size:width,type:WidthType.PERCENTAGE}:undefined,children:[paragraph(cell)]})})})});const specifiedWidth=parseFloat((el as HTMLElement).style.width);const width=Number.isFinite(specifiedWidth)?Math.min(100,Math.max(40,specifiedWidth)):100;if(rows.length)children.push(new Table({rows,width:{size:width,type:WidthType.PERCENTAGE},layout:(el as HTMLElement).style.tableLayout==='fixed'?TableLayoutType.FIXED:undefined}));return}if(tag==='div'&&el.children.length){Array.from(el.children).forEach(visit);return}children.push(paragraph(el))}
   Array.from(dom.body.children).forEach(visit);
   if(!children.length)children.push(new Paragraph(''));
   const document=new Document({numbering:{config:[{reference:'numbered',levels:[{level:0,format:'decimal',text:'%1.',alignment:AlignmentType.START}]}]},sections:[{children}]});
