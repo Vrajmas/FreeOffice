@@ -1,6 +1,7 @@
 const pageClass='paper';
 
 function makePage(){const page=document.createElement('div');page.className=pageClass;return page}
+function pageContents(root:HTMLElement){return Array.from(root.childNodes).flatMap(node=>node instanceof HTMLElement&&node.classList.contains(pageClass)?Array.from(node.childNodes):[node])}
 
 function mergeContinuations(nodes:Node[]){
   const merged:Node[]=[];
@@ -14,7 +15,7 @@ function mergeContinuations(nodes:Node[]){
 
 export function documentHtml(root:HTMLElement){
   const copy=root.cloneNode(true) as HTMLElement;
-  const nodes=mergeContinuations(Array.from(copy.children).filter(child=>child.classList.contains(pageClass)).flatMap(page=>Array.from(page.childNodes)));
+  const nodes=mergeContinuations(pageContents(copy));
   const container=document.createElement('div');container.append(...nodes);
   container.querySelectorAll('[data-page-continuation]').forEach(node=>node.removeAttribute('data-page-continuation'));
   return container.innerHTML;
@@ -59,13 +60,13 @@ function splitTable(table:HTMLTableElement,page:HTMLElement):HTMLTableElement|nu
 export function paginate(root:HTMLElement){
   let pages=Array.from(root.children).filter(child=>child.classList.contains(pageClass)) as HTMLElement[];
   if(!pages.length){const content=Array.from(root.childNodes);root.replaceChildren();const page=makePage();page.append(...content);root.append(page);return paginate(root)}
-  if(pages.length===1&&!overflows(pages[0]))return 1;
+  if(pages.length===1&&root.childNodes.length===1&&!overflows(pages[0]))return 1;
   const selected=window.getSelection();let marker:HTMLElement|null=null;
   if(selected?.rangeCount&&selected.isCollapsed&&root.contains(selected.anchorNode)){
     marker=document.createElement('span');marker.dataset.pageCaret='';marker.style.cssText='display:inline-block;width:0;height:0;overflow:hidden';
     selected.getRangeAt(0).insertNode(marker);
   }
-  const content=mergeContinuations(pages.flatMap(page=>Array.from(page.childNodes))).map(node=>{
+  const content=mergeContinuations(pageContents(root)).map(node=>{
     if(node.nodeType===Node.TEXT_NODE&&node.textContent?.trim()){const paragraph=document.createElement('p');paragraph.append(node);return paragraph}
     return node;
   });

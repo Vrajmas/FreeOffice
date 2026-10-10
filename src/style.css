@@ -30,3 +30,12 @@
 @page{size:A4;margin:0}
 @media(max-width:700px){.document-status-right>span{display:none}.statusbar{padding:0 8px}.zoom-controls{border:0}}
 .page-wrap{justify-content:flex-start}.pages-editor{margin-inline:auto}
+.table-drag-handle{position:absolute;z-index:4;width:24px;height:26px;display:grid;place-items:center;border:1px solid #cdd8e4;border-radius:5px;background:#fff;color:#4d698a;box-shadow:0 1px 4px #27303b1c;cursor:grab;padding:0}
+.table-drag-handle:hover{background:#eaf1f8;border-color:#9eb6d0;color:#22528e}
+.table-drag-handle:active{cursor:grabbing}
+.table-drag-handle:focus-visible{outline:2px solid #225da3;outline-offset:2px}
+.table-drop-line{position:absolute;z-index:5;height:3px;border-radius:2px;background:#2477bd;pointer-events:none;box-shadow:0 0 0 2px #fff}
+.table-drop-line::before,.table-drop-line::after{content:'';position:absolute;top:-3px;width:9px;height:9px;border-radius:50%;background:#2477bd}
+.table-drop-line::before{left:-4px}.table-drop-line::after{right:-4px}
+@media print{.table-drag-handle,.table-drop-line{display:none!important}}
+.page-wrap{position:relative}
