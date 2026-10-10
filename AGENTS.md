@@ -11,4 +11,4 @@
 ## Validation and releases
 
 - Run `npm run naming:test` when changing the naming validator. Pull request CI checks the branch name, pull request title, and every non-merge commit subject before installer builds.
-- Run `npm run build` for application changes. For a tagged release, the `vX.Y.Z` tag must match the version in `package.json`; `npm run release:check -- vX.Y.Z` checks this locally.
+- Run `npm run build` for application changes. Keep the checked-in package version at `0.0.0`. GitHub Actions calculates the next release version from Conventional Commit subjects, builds all six installers with that version, and publishes the tag and release only after every build passes. Run `npm run release:test` when changing the version calculator.

@@ -22,7 +22,7 @@ Create work on a branch named `<type>/<short-description>`, such as `feat/androi
 
 GitHub Actions builds both editors on macOS, Windows, and Android for pushes and pull requests. Download the six build artifacts from the workflow run. macOS produces `.dmg` installers, Windows produces `.exe` installers, and Android produces debug signed `.apk` files. These builds are for direct testing and installation; macOS and Windows installers are unsigned, and Android APKs use a debug key. Public distribution requires production signing and, on macOS, notarization.
 
-To publish a release, update the package version and lockfile with `npm version patch`, `npm version minor`, or `npm version major`, then run `git push origin main --follow-tags`. The tag must match `package.json`; CI checks this before publishing. A successful tagged run creates a GitHub Release with the six artifacts. For local builds, set `OFFICE_KIND=doc` or `OFFICE_KIND=sheet` and run `npm run build:desktop` on macOS or Windows, or `npm run build:android` with Java and the Android SDK installed.
+The checked-in package version stays at `0.0.0`. On each push to `main`, GitHub Actions calculates the next version from commits since the latest release tag: breaking changes bump major, `feat` bumps minor, and other commits bump patch. CI applies that version to all six installer builds and creates the version tag and GitHub Release only after every build succeeds. Pull requests build with a candidate version but do not publish. For local builds, set `OFFICE_KIND=doc` or `OFFICE_KIND=sheet` and run `npm run build:desktop` on macOS or Windows, or `npm run build:android` with Java and the Android SDK installed.
 
 ## Current limits
 
