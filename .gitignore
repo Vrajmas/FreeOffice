@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-doc/
+dist-sheet/
+.DS_Store
+*.log
+*.zip
+.build/
+.cache/
+releases/
