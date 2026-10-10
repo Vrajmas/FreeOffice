@@ -1,6 +1,7 @@
 import XLSX from 'xlsx-js-style';
 import mammoth from 'mammoth';
 import DOMPurify from 'dompurify';
+import JSZip from 'jszip';
 import {AlignmentType,Document,ExternalHyperlink,HeadingLevel,Packer,Paragraph,Table,TableCell,TableRow,TextRun,WidthType} from 'docx';
 
 export type Grid=Record<string,string>;
@@ -10,7 +11,23 @@ export type WorkbookData={sheets:SheetData[]};
 export const colName=(n:number)=>{let s='';for(n++;n;n=Math.floor((n-1)/26))s=String.fromCharCode(65+(n-1)%26)+s;return s};
 export const docxFilter=[{name:'Word document',extensions:['docx']}],xlsxFilter=[{name:'Excel workbook',extensions:['xlsx']}];
 
-export async function importDoc(bytes:Uint8Array){const arrayBuffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer;return DOMPurify.sanitize((await mammoth.convertToHtml({arrayBuffer})).value,{USE_PROFILES:{html:true}})}
+export async function importDoc(bytes:Uint8Array){
+  const arrayBuffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer;
+  const html=DOMPurify.sanitize((await mammoth.convertToHtml({arrayBuffer})).value,{USE_PROFILES:{html:true}});
+  const archive=await JSZip.loadAsync(bytes),source=archive.file('word/document.xml');
+  if(!source)return html;
+  const xml=new DOMParser().parseFromString(await source.async('string'),'application/xml');
+  const widths=Array.from(xml.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main','tbl')).map(table=>{
+    const value=table.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main','tblW')[0];
+    if(value?.getAttribute('w:type')!=='pct')return null;
+    const width=Number(value.getAttribute('w:w'))/50;
+    return Number.isFinite(width)&&width>=40&&width<=100?width:null;
+  });
+  if(!widths.some(width=>width!==null))return html;
+  const dom=new DOMParser().parseFromString(html,'text/html');
+  dom.querySelectorAll('table').forEach((table,index)=>{if(widths[index]!==null&&widths[index]!==undefined)table.style.width=`${widths[index]}%`});
+  return dom.body.innerHTML;
+}
 
 export async function exportDoc(html:string){
   const dom=new DOMParser().parseFromString(html,'text/html');
@@ -30,11 +47,11 @@ export async function exportDoc(html:string){
     const tag=el.tagName.toLowerCase();const content=Array.from(el.childNodes).flatMap(node=>runs(node));
     return new Paragraph({children:content.length?content:[new TextRun('')],heading:tag==='h1'?HeadingLevel.HEADING_1:tag==='h2'?HeadingLevel.HEADING_2:undefined,bullet:kind==='bullet'?{level:0}:undefined,numbering:kind==='number'?{reference:'numbered',level:0}:undefined,alignment:el.getAttribute('style')?.includes('text-align: center')?AlignmentType.CENTER:el.getAttribute('style')?.includes('text-align: right')?AlignmentType.RIGHT:undefined,spacing:{after:140}});
   }
-  function visit(el:Element){const tag=el.tagName.toLowerCase();if(tag==='ul'||tag==='ol'){for(const li of Array.from(el.children))children.push(paragraph(li,tag==='ul'?'bullet':'number'));return}if(tag==='table'){const rows=Array.from(el.querySelectorAll('tr')).map(tr=>new TableRow({children:Array.from(tr.children).map(cell=>new TableCell({children:[paragraph(cell)]}))}));if(rows.length)children.push(new Table({rows,width:{size:100,type:WidthType.PERCENTAGE}}));return}if(tag==='div'&&el.children.length){Array.from(el.children).forEach(visit);return}children.push(paragraph(el))}
+  function visit(el:Element){const tag=el.tagName.toLowerCase();if(tag==='ul'||tag==='ol'){for(const li of Array.from(el.children))children.push(paragraph(li,tag==='ul'?'bullet':'number'));return}if(tag==='table'){const rows=Array.from(el.querySelectorAll('tr')).map(tr=>new TableRow({children:Array.from(tr.children).map(cell=>new TableCell({children:[paragraph(cell)]}))}));const specifiedWidth=parseFloat((el as HTMLElement).style.width);const width=Number.isFinite(specifiedWidth)?Math.min(100,Math.max(40,specifiedWidth)):100;if(rows.length)children.push(new Table({rows,width:{size:width,type:WidthType.PERCENTAGE}}));return}if(tag==='div'&&el.children.length){Array.from(el.children).forEach(visit);return}children.push(paragraph(el))}
   Array.from(dom.body.children).forEach(visit);
   if(!children.length)children.push(new Paragraph(''));
   const document=new Document({numbering:{config:[{reference:'numbered',levels:[{level:0,format:'decimal',text:'%1.',alignment:AlignmentType.START}]}]},sections:[{children}]});
-  return new Uint8Array(await Packer.toBuffer(document));
+  return new Uint8Array(await Packer.toArrayBuffer(document));
 }
 
 function formatFromStyle(style:unknown):CellFormat{if(!style||typeof style!=='object')return {};const s=style as Record<string,any>;const fmt:CellFormat={};if(s.font){fmt.bold=!!s.font.bold;fmt.italic=!!s.font.italic;fmt.underline=!!s.font.underline;if(s.font.color?.rgb)fmt.color='#'+s.font.color.rgb.slice(-6)}if(s.fill?.fgColor?.rgb)fmt.fill='#'+s.fill.fgColor.rgb.slice(-6);if(s.alignment?.horizontal)fmt.align=s.alignment.horizontal;if(s.numFmt==='0.00%')fmt.numberFormat='percent';else if(s.numFmt==='#,##0.00')fmt.numberFormat='number';return fmt}
