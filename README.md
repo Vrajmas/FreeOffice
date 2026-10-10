@@ -4,7 +4,7 @@ Two local apps for personal Word documents and Excel workbooks, packaged for mac
 
 ## Personal Documents
 
-Open, edit, and save `.docx` files. The editor includes headings, text styling and color, alignment, numbered and bulleted lists, links, tables, find and replace, print, undo and redo, word count, and drag and drop opening.
+Open, edit, and save `.docx` files, or export A4 pages as PDF. The editor includes headings, font family and size controls, bold, italic, underline, strikethrough, color and highlight, alignment and indentation, numbered and bulleted lists, links, tables, find and replace, print, undo and redo, word count, and live zoom. Images can be uploaded, pasted from the clipboard, dragged within text, and resized with a pointer or arrow keys. Embedded PNG, JPEG, and GIF images are included in DOCX exports; WebP uploads are converted to PNG.
 
 ## Personal Spreadsheets
 
@@ -26,4 +26,4 @@ To publish a release, update the package version and lockfile with `npm version 
 
 ## Current limits
 
-These are personal editors, not full Microsoft Office replacements. Complex Word layout, images, comments, track changes, macros, charts, some Excel functions, and unsupported formatting may not survive import and export. Saving is manual, so keep original copies of important files.
+These are personal editors, not full Google Docs or Microsoft Office replacements. Complex Word layout, floating image wrap modes, comments, track changes, macros, charts, some Excel functions, and unsupported formatting may not survive import and export. The product is local only; cloud accounts, sharing, and live collaboration are outside its scope. Saving is manual, so keep original copies of important files.
