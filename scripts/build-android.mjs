@@ -30,6 +30,9 @@ const config = JSON.stringify({
 writeFileSync(path.join(stage, 'capacitor.config.json'), config);
 const cap = path.resolve('node_modules/@capacitor/cli/bin/capacitor');
 execFileSync(process.execPath, [cap, 'add', 'android'], { cwd: stage, stdio: 'inherit' });
+const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
+if (!sdk) throw new Error('Set ANDROID_HOME or ANDROID_SDK_ROOT to the Android SDK');
+writeFileSync(path.join(stage, 'android/local.properties'), `sdk.dir=${sdk}\n`);
 const gradle = path.join(stage, 'android/app/build.gradle');
 let source = readFileSync(gradle, 'utf8');
 source = source.replace(/versionCode\s+\d+/, `versionCode ${versionCode}`)
