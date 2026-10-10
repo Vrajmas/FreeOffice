@@ -1,6 +1,6 @@
 {
   "name": "personal-office",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -15,7 +15,8 @@
     "build:android": "node scripts/build-android.mjs",
     "release:check": "node scripts/check-release.mjs",
     "naming:check": "node scripts/validate-naming.mjs",
-    "naming:test": "node --test scripts/validate-naming.test.mjs"
+    "naming:test": "node --test scripts/validate-naming.test.mjs",
+    "sheets:test": "node --experimental-strip-types --test scripts/sheet-features.test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

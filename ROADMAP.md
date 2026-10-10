@@ -1,6 +1,6 @@
 # Personal Office roadmap
 
-## Current release: 0.3.7
+## Current release: 0.3.8
 
 Two separate macOS apps share one codebase: Personal Documents for `.docx` and Personal Spreadsheets for `.xlsx`. See README.md for current features and known compatibility limits.
 
@@ -21,11 +21,14 @@ The current release supports local editing, A4 pagination, PDF export, basic tex
 4. File fidelity: representative DOCX round trips for text, images, tables, and layout, with warnings for unsupported content.
 5. Local workflows: comments, suggestions, and version history stored on this device. Cloud sharing and live collaboration are outside the local-only scope.
 
-## Spreadsheets
+## Spreadsheets: Google Sheets capability target
 
-1. Sort and filter, frozen headings, CSV import and export.
-2. Charts, conditional formatting, data validation.
-3. Pivot-style summaries and larger workbooks.
+The current release supports local XLSX and CSV workflows, formulas, basic formatting, selected-range sorting, text filtering, and frozen first row or column. It does not yet match the full Google Sheets feature set.
+
+1. Rich cell editing: formatting, borders, merge, row and column insertion, resizing, fill handles, and find and replace.
+2. Data tools: multi-column and type-aware filters, formula-aware sort, data validation, conditional formatting, named ranges, and protected ranges.
+3. Analysis and presentation: charts, pivot tables, images, print layout, and larger virtualized workbooks.
+4. Local review and reliability: comments, version history, recovery copies, and representative XLSX round trips.
 
 ## Release checks
 

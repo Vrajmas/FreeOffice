@@ -8,7 +8,7 @@ Open, edit, and save `.docx` files, or export A4 pages as PDF. The editor includ
 
 ## Personal Spreadsheets
 
-Open, edit, and save `.xlsx` workbooks. Use multiple sheets, rename sheets, enter formulas (including references between sheets), select ranges, copy and paste tabular data, format cells, apply number and percent formats, and undo or redo changes. The visible grid grows to 500 rows and has 26 columns.
+Open, edit, and save `.xlsx` workbooks, or import and export CSV files. Use multiple sheets, rename sheets, enter formulas (including references between sheets), select ranges, copy and paste tabular data, format cells, apply number and percent formats, sort selected rows, filter a column, freeze row 1 or column A, and undo or redo changes. The visible grid grows to 500 rows and up to 104 columns as data is added.
 
 The desktop apps edit local files. Android builds use the system file picker to open a file and the Android share sheet to save or share an exported copy.
 
@@ -26,4 +26,4 @@ To publish a release, update the package version and lockfile with `npm version 
 
 ## Current limits
 
-These are personal editors, not full Google Docs or Microsoft Office replacements. Complex Word layout, floating image wrap modes, comments, track changes, macros, charts, some Excel functions, and unsupported formatting may not survive import and export. The product is local only; cloud accounts, sharing, and live collaboration are outside its scope. Saving is manual, so keep original copies of important files.
+These are personal editors, not full Google Docs, Google Sheets, or Microsoft Office replacements. Complex Word layout, floating image wrap modes, comments, track changes, macros, charts, pivot tables, some Excel functions, and unsupported formatting may not survive import and export. Sorting a range containing formulas is blocked until references can be adjusted safely. The product is local only; cloud accounts, sharing, and live collaboration are outside its scope. Saving is manual, so keep original copies of important files.

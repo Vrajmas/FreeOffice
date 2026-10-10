@@ -16,7 +16,7 @@ export function installAndroidBridge() {
     open: () => new Promise<OpenedFile | null>((resolve) => {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = import.meta.env.VITE_APP_KIND === 'sheet' ? '.xlsx' : '.docx';
+      input.accept = import.meta.env.VITE_APP_KIND === 'sheet' ? '.xlsx,.csv' : '.docx';
       input.onchange = async () => {
         const file = input.files?.[0];
         resolve(file ? { name: file.name, path: '', bytes: new Uint8Array(await file.arrayBuffer()) } : null);
