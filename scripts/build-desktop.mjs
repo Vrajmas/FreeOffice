@@ -11,7 +11,7 @@ const name = kind === 'doc' ? 'Personal Documents' : 'Personal Spreadsheets';
 const appId = `local.personaloffice.${kind === 'doc' ? 'documents' : 'spreadsheets'}`;
 const version = JSON.parse((await import('node:fs')).readFileSync('package.json', 'utf8')).version;
 process.env.ELECTRON_BUILDER_CACHE ||= path.resolve('.cache/electron-builder');
-process.env.ELECTRON_CACHE ||= path.resolve('.cache/electron');
+process.env.electron_config_cache ||= path.resolve('.cache/electron');
 const stage = path.resolve('.build', `desktop-${kind}`);
 const npmCli = process.env.npm_execpath;
 if (!npmCli) throw new Error('Run this script with npm run build:desktop');
@@ -31,6 +31,7 @@ await build({
   config: {
     appId, productName: name,
     directories: { app: stage, output: path.resolve('releases') },
+    electronDownload: { cache: path.resolve('.cache/electron') },
     files: ['dist/**/*', 'electron/**/*', 'package.json'],
     fileAssociations: [{ ext: kind === 'doc' ? 'docx' : 'xlsx',
       name: kind === 'doc' ? 'Word document' : 'Excel workbook', role: 'Editor' }],
