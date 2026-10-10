@@ -5,6 +5,7 @@ ROOT="${PWD}"
 WORK="${ROOT}/.build"
 OUT="${ROOT}/releases"
 CACHE="${ROOT}/.cache/electron"
+ELECTRON_VERSION=$(node -p "require('./node_modules/electron/package.json').version")
 mkdir -p "$WORK" "$CACHE" "$OUT"
 npx tsc --noEmit
 for KIND in doc sheet; do
@@ -34,7 +35,7 @@ path,ext,uti,label=sys.argv[1:]
 with open(path,'wb') as file:
     plistlib.dump({'CFBundleDocumentTypes':[{'CFBundleTypeName':label,'CFBundleTypeRole':'Editor','LSHandlerRank':'Owner','LSItemContentTypes':[uti],'CFBundleTypeExtensions':[ext]}]},file)
 PY
-  npx electron-packager "$STAGE" "$NAME" --platform=darwin --arch=arm64 --out="$WORK/package" --overwrite --electron-version=38.8.6 --download.cacheRoot="$CACHE" --app-bundle-id="$BUNDLE" --extend-info="$STAGE/info.plist" --icon="assets/$KIND.icns"
+  npx electron-packager "$STAGE" "$NAME" --platform=darwin --arch=arm64 --out="$WORK/package" --overwrite --electron-version="$ELECTRON_VERSION" --download.cacheRoot="$CACHE" --app-bundle-id="$BUNDLE" --extend-info="$STAGE/info.plist" --icon="assets/$KIND.icns"
   APP="$WORK/package/$NAME-darwin-arm64/$NAME.app"
   codesign --force --deep --sign - "$APP"
   codesign --verify --deep --strict "$APP"

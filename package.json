@@ -38,7 +38,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "concurrently": "^9.2.1",
-    "electron": "^38.3.0",
+    "electron": "^44.7.0",
     "electron-builder": "^26.15.3",
     "linkedom": "^0.18.13",
     "typescript": "^5.9.3",
