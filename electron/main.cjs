@@ -6,7 +6,7 @@ const ext=kind==='doc'?'.docx':'.xlsx';
 const appTitle=kind==='doc'?'Personal Documents':'Personal Spreadsheets';
 let win,rendererReady=false;
 const pendingPaths=[];
-function accepts(filePath){return typeof filePath==='string'&&filePath.toLowerCase().endsWith(ext)}
+function accepts(filePath){return typeof filePath==='string'&&(filePath.toLowerCase().endsWith(ext)||kind==='sheet'&&filePath.toLowerCase().endsWith('.csv'))}
 async function sendFile(filePath){if(!accepts(filePath))return;try{const data=await fs.readFile(filePath);win?.webContents.send('external-open',{name:path.basename(filePath),path:filePath,bytes:new Uint8Array(data)});win?.show();win?.focus()}catch(error){win?.webContents.send('external-open-error',String(error))}}
 function queueFile(filePath){if(!accepts(filePath))return;if(rendererReady&&win&&!win.isDestroyed())void sendFile(filePath);else pendingPaths.push(filePath)}
 app.on('open-file',(event,filePath)=>{event.preventDefault();queueFile(filePath)});
@@ -18,6 +18,6 @@ app.whenReady().then(()=>{create();for(const arg of process.argv.slice(1))if(acc
 app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit()});
 app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)create()});
 ipcMain.handle('renderer-ready',async()=>{rendererReady=true;const paths=pendingPaths.splice(0);for(const filePath of paths)await sendFile(filePath)});
-ipcMain.handle('open-file',async(_e,filters)=>{const x=await dialog.showOpenDialog(win,{properties:['openFile']});if(x.canceled)return null;const filePath=x.filePaths[0];if(!accepts(filePath))return null;const data=await fs.readFile(filePath);return {name:path.basename(filePath),path:filePath,bytes:new Uint8Array(data)}});
-ipcMain.handle('save-file',async(_e,{name,bytes,filters,path:existingPath})=>{let filePath=existingPath;if(!filePath){const x=await dialog.showSaveDialog(win,{defaultPath:name,filters});if(x.canceled)return null;filePath=x.filePath}if(!accepts(filePath))throw new Error('Expected a '+ext+' file');await fs.writeFile(filePath,Buffer.from(bytes));return filePath});
+ipcMain.handle('open-file',async(_e,filters)=>{const x=await dialog.showOpenDialog(win,{properties:['openFile'],filters});if(x.canceled)return null;const filePath=x.filePaths[0];if(!accepts(filePath))return null;const data=await fs.readFile(filePath);return {name:path.basename(filePath),path:filePath,bytes:new Uint8Array(data)}});
+ipcMain.handle('save-file',async(_e,{name,bytes,filters,path:existingPath})=>{let filePath=existingPath;if(!filePath){const x=await dialog.showSaveDialog(win,{defaultPath:name,filters});if(x.canceled)return null;filePath=x.filePath}const expected=kind==='sheet'&&name.toLowerCase().endsWith('.csv')?'.csv':ext;if(typeof filePath!=='string'||!filePath.toLowerCase().endsWith(expected))throw new Error('Expected a '+expected+' file');await fs.writeFile(filePath,Buffer.from(bytes));return filePath});
 ipcMain.handle('save-pdf',async(_e,name)=>{if(kind!=='doc'||!win||win.isDestroyed())throw new Error('PDF export is unavailable');const x=await dialog.showSaveDialog(win,{defaultPath:name,filters:[{name:'PDF document',extensions:['pdf']}]});if(x.canceled||!x.filePath)return null;if(!x.filePath.toLowerCase().endsWith('.pdf'))throw new Error('Expected a .pdf file');const bytes=await win.webContents.printToPDF({pageSize:'A4',printBackground:true,preferCSSPageSize:true,margins:{marginType:'none'}});await fs.writeFile(x.filePath,bytes);return x.filePath});

@@ -28,6 +28,7 @@ writeFileSync(path.join(stage, 'package.json'), JSON.stringify({
 }));
 await build({
   targets: platform === 'darwin' ? Platform.MAC.createTarget('dmg') : Platform.WINDOWS.createTarget('nsis'),
+  publish: 'never',
   config: {
     appId, productName: name,
     directories: { app: stage, output: path.resolve('releases') },

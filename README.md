@@ -8,7 +8,7 @@ Open, edit, and save `.docx` files, or export A4 pages as PDF. The editor includ
 
 ## Personal Spreadsheets
 
-Open, edit, and save `.xlsx` workbooks. Use multiple sheets, rename sheets, enter formulas (including references between sheets), select ranges, copy and paste tabular data, format cells, apply number and percent formats, and undo or redo changes. The visible grid grows to 500 rows and has 26 columns.
+Open, edit, and save `.xlsx` workbooks, or import and export CSV files. Use multiple sheets, rename sheets, enter formulas (including references between sheets), select ranges, copy and paste tabular data, format cells, apply number and percent formats, sort selected rows, filter a column, freeze row 1 or column A, and undo or redo changes. The visible grid grows to 500 rows and up to 104 columns as data is added.
 
 The desktop apps edit local files. Android builds use the system file picker to open a file and the Android share sheet to save or share an exported copy.
 
@@ -22,8 +22,8 @@ Create work on a branch named `<type>/<short-description>`, such as `feat/androi
 
 GitHub Actions builds both editors on macOS, Windows, and Android for pushes and pull requests. Download the six build artifacts from the workflow run. macOS produces `.dmg` installers, Windows produces `.exe` installers, and Android produces debug signed `.apk` files. These builds are for direct testing and installation; macOS and Windows installers are unsigned, and Android APKs use a debug key. Public distribution requires production signing and, on macOS, notarization.
 
-To publish a release, update the package version and lockfile with `npm version patch`, `npm version minor`, or `npm version major`, then run `git push origin main --follow-tags`. The tag must match `package.json`; CI checks this before publishing. A successful tagged run creates a GitHub Release with the six artifacts. For local builds, set `OFFICE_KIND=doc` or `OFFICE_KIND=sheet` and run `npm run build:desktop` on macOS or Windows, or `npm run build:android` with Java and the Android SDK installed.
+The checked-in package version stays at `0.0.0`. On each push to `main`, GitHub Actions calculates the next version from commits since the latest release tag: breaking changes bump major, `feat` bumps minor, and other commits bump patch. CI applies that version to all six installer builds and creates the version tag and GitHub Release only after every build succeeds. Pull requests build with a candidate version but do not publish. For local builds, set `OFFICE_KIND=doc` or `OFFICE_KIND=sheet` and run `npm run build:desktop` on macOS or Windows, or `npm run build:android` with Java and the Android SDK installed.
 
 ## Current limits
 
-These are personal editors, not full Google Docs or Microsoft Office replacements. Complex Word layout, floating image wrap modes, comments, track changes, macros, charts, some Excel functions, and unsupported formatting may not survive import and export. The product is local only; cloud accounts, sharing, and live collaboration are outside its scope. Saving is manual, so keep original copies of important files.
+These are personal editors, not full Google Docs, Google Sheets, or Microsoft Office replacements. Complex Word layout, floating image wrap modes, comments, track changes, macros, charts, pivot tables, some Excel functions, and unsupported formatting may not survive import and export. Sorting a range containing formulas is blocked until references can be adjusted safely. The product is local only; cloud accounts, sharing, and live collaboration are outside its scope. Saving is manual, so keep original copies of important files.
