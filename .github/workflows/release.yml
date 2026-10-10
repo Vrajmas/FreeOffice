@@ -86,7 +86,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - if: matrix.platform == 'android'
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - if: matrix.platform == 'android'
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - run: npm ci
